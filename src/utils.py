@@ -72,14 +72,13 @@ def rgb_to_lab(image):
     Returns:
         Image LAB normalisée
     """
-    # TODO: Implémenter la conversion RGB vers LAB
     lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
     
-    # Normalisation
+    # Normalisation cohérente [-1, 1] pour correspondre à tanh
     lab = lab.astype(np.float32)
-    lab[:, :, 0] = lab[:, :, 0] / 100.0  # L: 0-100 -> 0-1
-    lab[:, :, 1] = (lab[:, :, 1] + 128) / 255.0  # a: -128-127 -> 0-1
-    lab[:, :, 2] = (lab[:, :, 2] + 128) / 255.0  # b: -128-127 -> 0-1
+    lab[:, :, 0] = (lab[:, :, 0] / 50.0) - 1.0  # L: 0-100 -> [-1, 1]
+    lab[:, :, 1] = lab[:, :, 1] / 128.0  # a: -128-127 -> [-1, 1]
+    lab[:, :, 2] = lab[:, :, 2] / 128.0  # b: -128-127 -> [-1, 1]
     
     return lab
 
@@ -89,19 +88,20 @@ def lab_to_rgb(lab_image):
     Convertit une image LAB en RGB.
     
     Args:
-        lab_image: Image LAB normalisée
+        lab_image: Image LAB normalisée [-1, 1]
         
     Returns:
         Image RGB
     """
-    # TODO: Implémenter la conversion LAB vers RGB
     lab = lab_image.copy()
     
-    # Dénormalisation
-    lab[:, :, 0] = lab[:, :, 0] * 100.0
-    lab[:, :, 1] = lab[:, :, 1] * 255.0 - 128
-    lab[:, :, 2] = lab[:, :, 2] * 255.0 - 128
+    # Dénormalisation cohérente avec la normalisation
+    lab[:, :, 0] = (lab[:, :, 0] + 1.0) * 50.0  # [-1, 1] -> [0, 100]
+    lab[:, :, 1] = lab[:, :, 1] * 128.0  # [-1, 1] -> [-128, 127]
+    lab[:, :, 2] = lab[:, :, 2] * 128.0  # [-1, 1] -> [-128, 127]
     
+    # Clipping pour éviter les valeurs hors limites
+    lab = np.clip(lab, [0, -128, -128], [100, 127, 127])
     lab = lab.astype(np.uint8)
     rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
     
