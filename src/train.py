@@ -1,17 +1,17 @@
 """
-Script d'entraînement du modèle de recolorisation.
+Script d'entraînement pour le modèle de recolorisation.
 """
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+import os
 from pathlib import Path
+import matplotlib.pyplot as plt
 
-from model import get_model
-from utils import ImageColorizationDataset, rgb_to_lab, lab_to_rgb
+from .model import ColorizationCNN
+from .utils import ImageColorizationDataset
 
 
 def train_model(epochs=50, batch_size=16, learning_rate=0.001):
@@ -23,134 +23,99 @@ def train_model(epochs=50, batch_size=16, learning_rate=0.001):
         batch_size: Taille des batches
         learning_rate: Taux d'apprentissage
     """
+    print(f"🚀 Début de l'entraînement - {epochs} époques")
     
     # Configuration du device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Utilisation du device: {device}")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Device utilisé: {device}")
     
-    # TODO: Créer les datasets et dataloaders
-    train_dataset = ImageColorizationDataset("data/train")
+    # Création des datasets
+    train_dataset = ImageColorizationDataset('data/train')
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     
     # Initialisation du modèle
-    model = get_model("simple").to(device)
-    
-    # Loss function et optimizer
-    criterion = nn.MSELoss()  # TODO: Tester d'autres loss functions
+    model = ColorizationCNN().to(device)
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
-    # Listes pour sauvegarder les métriques
+    # Listes pour stocker les pertes
     train_losses = []
     
-    print(f"Début de l'entraînement pour {epochs} époques...")
-    
+    # Boucle d'entraînement
     for epoch in range(epochs):
         model.train()
         epoch_loss = 0.0
         
-        # Barre de progression
-        pbar = tqdm(train_loader, desc=f"Époque {epoch+1}/{epochs}")
-        
-        for batch_idx, (gray_images, color_targets) in enumerate(pbar):
-            # TODO: Implémenter la boucle d'entraînement
-            gray_images = gray_images.to(device)
-            color_targets = color_targets.to(device)
+        for batch_idx, (L_channel, ab_channels) in enumerate(train_loader):
+            L_channel = L_channel.to(device)
+            ab_channels = ab_channels.to(device)
             
             # Forward pass
             optimizer.zero_grad()
-            predictions = model(gray_images)
-            loss = criterion(predictions, color_targets)
+            predicted_ab = model(L_channel)
+            
+            # Calcul de la perte
+            loss = criterion(predicted_ab, ab_channels)
             
             # Backward pass
             loss.backward()
             optimizer.step()
             
             epoch_loss += loss.item()
-            pbar.set_postfix({"Loss": f"{loss.item():.4f}"})
+            
+            if batch_idx % 10 == 0:
+                print(f'Epoch {epoch+1}/{epochs}, Batch {batch_idx}, Loss: {loss.item():.4f}')
         
-        # Calcul de la loss moyenne pour l'époque
         avg_loss = epoch_loss / len(train_loader)
         train_losses.append(avg_loss)
         
-        print(f"Époque {epoch+1}: Loss moyenne = {avg_loss:.4f}")
+        print(f'Epoch {epoch+1}/{epochs} - Perte moyenne: {avg_loss:.4f}')
         
         # Sauvegarde du modèle tous les 10 époques
         if (epoch + 1) % 10 == 0:
-            save_checkpoint(model, optimizer, epoch, avg_loss)
+            save_model(model, f'model_epoch_{epoch+1}.pth')
     
     # Sauvegarde finale
-    save_model(model, "model_final.pth")
-    plot_training_curves(train_losses)
+    save_model(model, 'colorization_model_final.pth')
+    
+    # Graphique des pertes
+    plot_training_loss(train_losses)
     
     print("✅ Entraînement terminé !")
 
 
-def save_checkpoint(model, optimizer, epoch, loss):
-    """Sauvegarde un checkpoint du modèle."""
-    checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': loss,
-    }
-    Path("results").mkdir(exist_ok=True)
-    torch.save(checkpoint, f"results/checkpoint_epoch_{epoch+1}.pth")
-
-
 def save_model(model, filename):
-    """Sauvegarde le modèle final."""
-    Path("results").mkdir(exist_ok=True)
-    torch.save(model.state_dict(), f"results/{filename}")
+    """Sauvegarde le modèle."""
+    models_dir = Path('models')
+    models_dir.mkdir(exist_ok=True)
+    
+    torch.save(model.state_dict(), models_dir / filename)
+    print(f"💾 Modèle sauvegardé: {filename}")
 
 
-def load_model(model_path):
+def load_model(filename, device='cpu'):
     """Charge un modèle sauvegardé."""
-    model = get_model("simple")
-    model.load_state_dict(torch.load(model_path))
+    model = ColorizationCNN()
+    model.load_state_dict(torch.load(f'models/{filename}', map_location=device))
+    model.to(device)
     return model
 
 
-def plot_training_curves(train_losses):
-    """Affiche les courbes d'entraînement."""
+def plot_training_loss(losses):
+    """Affiche le graphique des pertes d'entraînement."""
     plt.figure(figsize=(10, 6))
-    plt.plot(train_losses, label='Training Loss')
+    plt.plot(losses)
+    plt.title('Évolution de la perte pendant l\'entraînement')
     plt.xlabel('Époque')
-    plt.ylabel('Loss')
-    plt.title('Courbe d\'entraînement')
-    plt.legend()
+    plt.ylabel('Perte MSE')
     plt.grid(True)
-    plt.savefig('results/training_curve.png')
+    
+    # Sauvegarde du graphique
+    results_dir = Path('results')
+    results_dir.mkdir(exist_ok=True)
+    plt.savefig(results_dir / 'training_loss.png', dpi=150, bbox_inches='tight')
     plt.show()
 
 
-def validate_model(model, val_loader, device):
-    """
-    Évalue le modèle sur l'ensemble de validation.
-    
-    Args:
-        model: Modèle à évaluer
-        val_loader: DataLoader de validation
-        device: Device (CPU/GPU)
-        
-    Returns:
-        Loss moyenne de validation
-    """
-    model.eval()
-    val_loss = 0.0
-    criterion = nn.MSELoss()
-    
-    with torch.no_grad():
-        for gray_images, color_targets in val_loader:
-            gray_images = gray_images.to(device)
-            color_targets = color_targets.to(device)
-            
-            predictions = model(gray_images)
-            loss = criterion(predictions, color_targets)
-            val_loss += loss.item()
-    
-    return val_loss / len(val_loader)
-
-
 if __name__ == "__main__":
-    # Lancement de l'entraînement
-    train_model(epochs=50)
+    train_model(epochs=20)  # Test avec 20 époques

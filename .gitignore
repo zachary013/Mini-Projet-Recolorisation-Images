@@ -1,0 +1,37 @@
+# Images et données
+data/train/
+data/test/
+data/historical/
+results/
+models/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environnement virtuel
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Logs et temporaires
+*.log
+*.tmp
+*.temp
