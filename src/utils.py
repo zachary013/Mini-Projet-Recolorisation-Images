@@ -45,8 +45,9 @@ class ImageColorizationDataset(Dataset):
         image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Redimensionner
-        image = cv2.resize(image, (256, 256))
+        # Redimensionner (modifiable selon les ressources)
+        target_size = (256, 256)  # Changez en (512, 512) si GPU puissant
+        image = cv2.resize(image, target_size)
         
         # Convertir en LAB
         lab_image = rgb_to_lab(image)

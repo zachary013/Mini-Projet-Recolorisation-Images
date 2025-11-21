@@ -44,8 +44,8 @@ def colorize_images(input_path, model_path='models/colorization_model_final.pth'
         # Colorisation
         colorized = colorize_single_image(str(img_path), model, device)
         
-        # Sauvegarde
-        output_path = output_dir / f"colorized_{img_path.name}"
+        # Sauvegarde en PNG pour meilleure qualité
+        output_path = output_dir / f"colorized_{img_path.stem}.png"
         cv2.imwrite(str(output_path), cv2.cvtColor(colorized, cv2.COLOR_RGB2BGR))
         
         print(f"✅ Sauvegardé: {output_path}")
