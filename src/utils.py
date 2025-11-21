@@ -170,12 +170,9 @@ def evaluate_results():
     """
     print("📊 Évaluation des résultats...")
     
-    # TODO: Implémenter l'évaluation complète
-    # 1. Charger les images originales et colorisées
-    # 2. Calculer PSNR et SSIM
-    # 3. Afficher les statistiques
-    
+    test_path = Path("data/test")
     results_path = Path("results/predictions")
+    
     if not results_path.exists():
         print("❌ Aucun résultat trouvé dans results/predictions/")
         return
@@ -183,10 +180,51 @@ def evaluate_results():
     psnr_scores = []
     ssim_scores = []
     
-    # TODO: Parcourir les images et calculer les métriques
+    # Parcourir les images colorisées
+    for colorized_file in results_path.glob("colorized_*.jpg"):
+        original_name = colorized_file.name.replace("colorized_", "")
+        original_path = test_path / original_name
+        
+        if original_path.exists():
+            # Charger les images
+            original = cv2.imread(str(original_path))
+            original = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
+            
+            colorized = cv2.imread(str(colorized_file))
+            colorized = cv2.cvtColor(colorized, cv2.COLOR_BGR2RGB)
+            
+            # Redimensionner si nécessaire
+            if original.shape != colorized.shape:
+                colorized = cv2.resize(colorized, (original.shape[1], original.shape[0]))
+            
+            # Calculer les métriques
+            psnr = calculate_psnr(original, colorized)
+            ssim = calculate_ssim(original, colorized)
+            
+            psnr_scores.append(psnr)
+            ssim_scores.append(ssim)
     
-    print(f"PSNR moyen: {np.mean(psnr_scores):.2f} dB")
-    print(f"SSIM moyen: {np.mean(ssim_scores):.3f}")
+    if psnr_scores:
+        print(f"PSNR moyen: {np.mean(psnr_scores):.2f} dB (±{np.std(psnr_scores):.2f})")
+        print(f"SSIM moyen: {np.mean(ssim_scores):.3f} (±{np.std(ssim_scores):.3f})")
+        print(f"Nombre d'images évaluées: {len(psnr_scores)}")
+        
+        # Sauvegarder les résultats
+        results = {
+            'psnr_mean': np.mean(psnr_scores),
+            'psnr_std': np.std(psnr_scores),
+            'ssim_mean': np.mean(ssim_scores),
+            'ssim_std': np.std(ssim_scores),
+            'num_images': len(psnr_scores)
+        }
+        
+        import json
+        with open('results/evaluation_metrics.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        print("✅ Métriques sauvegardées dans results/evaluation_metrics.json")
+    else:
+        print("❌ Aucune image correspondante trouvée pour l'évaluation")
 
 
 def visualize_results(original, grayscale, colorized, save_path=None):

@@ -25,23 +25,23 @@ class ColorizationCNN(nn.Module):
         self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
         self.bn4 = nn.BatchNorm2d(512)
         
-        # Decoder avec skip connections (dimensions corrigées)
+        # Decoder avec skip connections
         self.upconv1 = nn.ConvTranspose2d(512, 256, 2, stride=2)
-        self.conv5 = nn.Conv2d(256, 256, 3, padding=1)  # Pas de skip ici
+        self.conv5 = nn.Conv2d(512, 256, 3, padding=1)  # 512 = 256 + 256 (skip)
         self.bn5 = nn.BatchNorm2d(256)
         
         self.upconv2 = nn.ConvTranspose2d(256, 128, 2, stride=2)
-        self.conv6 = nn.Conv2d(128, 128, 3, padding=1)  # Pas de skip ici
+        self.conv6 = nn.Conv2d(256, 128, 3, padding=1)  # 256 = 128 + 128 (skip)
         self.bn6 = nn.BatchNorm2d(128)
         
         self.upconv3 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.conv7 = nn.Conv2d(64, 64, 3, padding=1)   # Pas de skip ici
+        self.conv7 = nn.Conv2d(128, 64, 3, padding=1)   # 128 = 64 + 64 (skip)
         self.bn7 = nn.BatchNorm2d(64)
         
         self.final_conv = nn.Conv2d(64, 2, 3, padding=1)
         
     def forward(self, x):
-        # Encoder avec skip connections
+        # Encoder avec sauvegarde des features pour skip connections
         x1 = F.relu(self.bn1(self.conv1(x)))
         x2 = F.max_pool2d(x1, 2)
         
@@ -53,18 +53,21 @@ class ColorizationCNN(nn.Module):
         
         x7 = F.relu(self.bn4(self.conv4(x6)))
         
-        # Decoder - pas de pooling sur la dernière couche encoder
-        x9 = F.relu(self.upconv1(x7))  # Utiliser x7 au lieu de x8
-        x9 = F.relu(self.bn5(self.conv5(x9)))
+        # Decoder avec skip connections
+        x8 = F.relu(self.upconv1(x7))
+        x8 = torch.cat([x8, x5], dim=1)  # Skip connection
+        x8 = F.relu(self.bn5(self.conv5(x8)))
         
-        x10 = F.relu(self.upconv2(x9))
-        x10 = F.relu(self.bn6(self.conv6(x10)))
+        x9 = F.relu(self.upconv2(x8))
+        x9 = torch.cat([x9, x3], dim=1)  # Skip connection
+        x9 = F.relu(self.bn6(self.conv6(x9)))
         
-        x11 = F.relu(self.upconv3(x10))
-        x11 = F.relu(self.bn7(self.conv7(x11)))
+        x10 = F.relu(self.upconv3(x9))
+        x10 = torch.cat([x10, x1], dim=1)  # Skip connection
+        x10 = F.relu(self.bn7(self.conv7(x10)))
         
         # Sortie finale [-1, 1] pour correspondre à la normalisation
-        output = torch.tanh(self.final_conv(x11))
+        output = torch.tanh(self.final_conv(x10))
         
         return output
 
