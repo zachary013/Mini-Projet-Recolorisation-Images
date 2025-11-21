@@ -1,4 +1,6 @@
 # Projet de Recolorisation d'Images Historiques
+![recolorisation](https://github.com/user-attachments/assets/b82123a4-f373-41f3-acd7-26edceb80988)
+
 
 ## Description
 Application de vision artificielle pour la colorisation automatique d'images historiques en noir et blanc. Le projet utilise des réseaux de neurones convolutionnels (CNN) avec architecture encoder-decoder et skip connections pour apprendre à restituer des couleurs plausibles et réalistes.
@@ -112,4 +114,4 @@ python main.py --mode complete
 - **Historiques**: 34 images en noir et blanc à coloriser
 
 ## Auteur
-Projet académique - Mini-Projet Traitement d'Images
+Zakariae AZARKAN
