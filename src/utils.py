@@ -65,48 +65,47 @@ class ImageColorizationDataset(Dataset):
 
 def rgb_to_lab(image):
     """
-    Convertit une image RGB en espace colorimétrique LAB.
-    
+    Convertit une image RGB en espace colorimétrique LAB normalisé pour le modèle.
     Args:
-        image: Image RGB (numpy array)
-        
+        image: Image RGB (numpy array) uint8 (0-255) ou float
     Returns:
-        Image LAB normalisée
+        Image LAB normalisée [0, 1]
     """
-    lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
-    lab = lab.astype(np.float32)
+    # 1. Normalisation en float32 [0, 1] AVANT la conversion
+    image_float = image.astype(np.float32) / 255.0
     
-    # Normalisation corrigée pour [0, 1]
-    lab[:, :, 0] = lab[:, :, 0] / 100.0  # L: 0-100 → [0, 1]
-    lab[:, :, 1] = (lab[:, :, 1] + 128.0) / 255.0  # a: -128,127 → [0, 1]  
-    lab[:, :, 2] = (lab[:, :, 2] + 128.0) / 255.0  # b: -128,127 → [0, 1]
+    # 2. Conversion RGB -> LAB
+    # OpenCV sortira : L [0, 100], a [-127, 127], b [-127, 127]
+    lab = cv2.cvtColor(image_float, cv2.COLOR_RGB2LAB)
     
-    return lab
+    # 3. Normalisation pour le modèle (Sigmoid attend [0, 1])
+    lab_norm = np.zeros_like(lab)
+    lab_norm[:, :, 0] = lab[:, :, 0] / 100.0           # L: 0-100 -> [0, 1]
+    lab_norm[:, :, 1] = (lab[:, :, 1] + 128.0) / 255.0 # a: -128..127 -> [0, 1]
+    lab_norm[:, :, 2] = (lab[:, :, 2] + 128.0) / 255.0 # b: -128..127 -> [0, 1]
+    
+    return lab_norm
 
 
 def lab_to_rgb(lab_image):
     """
-    Convertit une image LAB en RGB.
-    
-    Args:
-        lab_image: Image LAB normalisée [0, 1]
-        
-    Returns:
-        Image RGB
+    Convertit une image LAB normalisée [0, 1] vers RGB uint8.
     """
-    lab = lab_image.copy()
+    lab = np.zeros_like(lab_image)
     
-    # Dénormalisation corrigée
-    lab[:, :, 0] = lab[:, :, 0] * 100.0  # [0, 1] -> [0, 100]
-    lab[:, :, 1] = (lab[:, :, 1] * 255.0) - 128.0  # [0, 1] -> [-128, 127]
-    lab[:, :, 2] = (lab[:, :, 2] * 255.0) - 128.0  # [0, 1] -> [-128, 127]
+    # 1. Dénormalisation [0, 1] -> Valeurs LAB standards
+    lab[:, :, 0] = lab_image[:, :, 0] * 100.0              # L -> 0-100
+    lab[:, :, 1] = (lab_image[:, :, 1] * 255.0) - 128.0    # a -> -128..127
+    lab[:, :, 2] = (lab_image[:, :, 2] * 255.0) - 128.0    # b -> -128..127
     
-    # Clipping pour éviter les valeurs hors limites
-    lab = np.clip(lab, [0, -128, -128], [100, 127, 127])
-    lab = lab.astype(np.uint8)
+    # 2. Conversion LAB -> RGB
+    # OpenCV gère la conversion float -> float RGB [0, 1]
     rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
     
-    return rgb
+    # 3. Retour vers uint8 [0, 255]
+    rgb_uint8 = (rgb * 255.0).clip(0, 255).astype(np.uint8)
+    
+    return rgb_uint8
 
 
 def tensor_to_image(tensor):

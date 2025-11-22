@@ -44,14 +44,10 @@ def train_model(epochs=50, batch_size=16, learning_rate=0.001):
     # Initialisation du modèle avec loss améliorée
     model = ColorizationCNN().to(device)
     
-    # Loss combinée : MSE + L1 pour éviter les couleurs délavées
-    mse_loss = nn.MSELoss()
-    l1_loss = nn.L1Loss()
+    # Loss L1 uniquement pour éviter les couleurs grises (conseil Gemini)
+    criterion = nn.L1Loss()
     
-    def combined_loss(pred, target):
-        return 0.7 * mse_loss(pred, target) + 0.3 * l1_loss(pred, target)
-    
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     # Listes pour stocker les pertes
     train_losses = []
@@ -71,8 +67,8 @@ def train_model(epochs=50, batch_size=16, learning_rate=0.001):
             optimizer.zero_grad()
             predicted_ab = model(L_channel)
             
-            # Calcul de la perte améliorée
-            loss = combined_loss(predicted_ab, ab_channels)
+            # Calcul de la perte L1
+            loss = criterion(predicted_ab, ab_channels)
             
             # Backward pass
             loss.backward()
@@ -93,7 +89,7 @@ def train_model(epochs=50, batch_size=16, learning_rate=0.001):
                 ab_channels = ab_channels.to(device)
                 
                 predicted_ab = model(L_channel)
-                loss = combined_loss(predicted_ab, ab_channels)
+                loss = criterion(predicted_ab, ab_channels)
                 epoch_val_loss += loss.item()
         
         avg_train_loss = epoch_train_loss / len(train_loader)
