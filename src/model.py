@@ -66,8 +66,8 @@ class ColorizationCNN(nn.Module):
         x10 = torch.cat([x10, x1], dim=1)  # Skip connection
         x10 = F.relu(self.bn7(self.conv7(x10)))
         
-        # Sortie finale [-1, 1] pour correspondre à la normalisation
-        output = torch.tanh(self.final_conv(x10))
+        # Sortie finale [0, 1] pour correspondre à la nouvelle normalisation
+        output = torch.sigmoid(self.final_conv(x10))
         
         return output
 
