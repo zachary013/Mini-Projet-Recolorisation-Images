@@ -22,7 +22,7 @@ def colorize_images(input_path, model_path='models/colorization_model_final.pth'
     """
     print(f"🎨 Colorisation des images de {input_path}")
     
-    # Chargement du modèle
+    # Chargement du modèle (stable)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = load_model(model_path, device)
     
@@ -125,7 +125,7 @@ def demo_colorization(image_path, model_path='models/colorization_model_final.pt
     """
     print(f"🎨 Démonstration de colorisation sur {image_path}")
     
-    # Chargement du modèle
+    # Chargement du modèle (stable)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = load_model(model_path, device)
     

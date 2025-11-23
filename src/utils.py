@@ -38,7 +38,6 @@ class ImageColorizationDataset(Dataset):
         Returns:
             Tuple (image_gray, color_channels) en format LAB
         """
-        # TODO: Implémenter le chargement des images
         image_path = self.image_paths[idx]
         
         # Charger l'image couleur
@@ -46,8 +45,12 @@ class ImageColorizationDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Redimensionner (modifiable selon les ressources)
-        target_size = (256, 256)  # Changez en (512, 512) si GPU puissant
+        target_size = (512, 512)  # Haute résolution
         image = cv2.resize(image, target_size)
+        
+        # Data Augmentation : Flip horizontal (50% de chance)
+        if np.random.random() > 0.5:
+            image = cv2.flip(image, 1)
         
         # Convertir en LAB
         lab_image = rgb_to_lab(image)
@@ -259,27 +262,29 @@ def visualize_results(original, grayscale, colorized, save_path=None):
     plt.show()
 
 
-def preprocess_image(image_path, target_size=(256, 256)):
+def preprocess_image(image_path, target_size=(512, 512)):
     """
-    Préprocesse une image pour l'inférence.
-    
-    Args:
-        image_path: Chemin vers l'image
-        target_size: Taille cible
-        
-    Returns:
-        Image préprocessée en tensor
+    Préprocesse une image pour l'inférence (CORRIGÉ).
     """
-    # TODO: Charger et préprocesser l'image
+    # 1. Charger l'image
     image = cv2.imread(str(image_path))
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, target_size)
     
-    # Convertir en niveaux de gris pour l'entrée du modèle
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    gray = gray.reshape(1, 1, *target_size)  # Ajouter dimensions batch et canal
+    # 2. Utiliser rgb_to_lab pour avoir la MÊME normalisation que l'entraînement (0 à 1)
+    lab_image = rgb_to_lab(image)
     
-    return torch.from_numpy(gray).float()
+    # 3. Extraire le canal L
+    L_channel = lab_image[:, :, 0:1]  # Shape (512, 512, 1)
+    
+    # 4. Convertir en Tensor PyTorch
+    # Transpose pour passer de (H, W, C) -> (C, H, W)
+    tensor = torch.from_numpy(L_channel.transpose(2, 0, 1)).float()
+    
+    # Ajouter la dimension de batch: (1, 1, 512, 512)
+    tensor = tensor.unsqueeze(0)
+    
+    return tensor
 
 
 if __name__ == "__main__":

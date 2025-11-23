@@ -25,7 +25,7 @@ def train_model(epochs=50, batch_size=16, learning_rate=0.001):
     """
     print(f"🚀 Début de l'entraînement - {epochs} époques")
     
-    # Configuration du device
+    # Configuration du device (stable)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device utilisé: {device}")
     
