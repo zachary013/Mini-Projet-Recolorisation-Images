@@ -55,50 +55,54 @@ def colorize_images(input_path, model_path='models/colorization_model_final.pth'
 
 def colorize_single_image(image_path, model, device):
     """
-    Colorise une seule image.
-    
-    Args:
-        image_path: Chemin vers l'image
-        model: Modèle de colorisation
-        device: Device de calcul
-        
-    Returns:
-        Image colorisée (RGB)
+    Colorise une image en préservant la haute résolution originale.
+    Technique L-channel grafting pour qualité professionnelle.
     """
-    # Chargement et préparation de l'image
-    image = cv2.imread(image_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    original_size = image.shape[:2]
+    # 1. Chargement de l'image originale (Haute Résolution)
+    original_img = cv2.imread(image_path)
+    if original_img is None:
+        return None
+        
+    # Gérer les images N&B historiques (1 canal) vs RGB (3 canaux)
+    if len(original_img.shape) == 2:
+        original_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2RGB)
+    else:
+        original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
     
-    # Redimensionnement pour le modèle
-    image_resized = cv2.resize(image, (256, 256))
+    # Extraire le canal L original en haute résolution
+    original_lab = rgb_to_lab(original_img)
+    L_original = original_lab[:, :, 0]  # Garder en haute résolution !
+    original_h, original_w = L_original.shape
     
-    # Conversion en LAB et extraction du canal L
-    lab_image = rgb_to_lab(image_resized)
-    L_channel = lab_image[:, :, 0:1]
+    # 2. Préparation pour le modèle (256x256)
+    img_resized = cv2.resize(original_img, (256, 256))
+    lab_resized = rgb_to_lab(img_resized)
+    L_input = lab_resized[:, :, 0:1]
     
-    # Préparation du tensor d'entrée
-    L_tensor = torch.FloatTensor(L_channel).permute(2, 0, 1).unsqueeze(0)
-    L_tensor = L_tensor.to(device)
+    # Tensor d'entrée
+    L_tensor = torch.FloatTensor(L_input).permute(2, 0, 1).unsqueeze(0).to(device)
     
-    # Prédiction
+    # 3. Prédiction des couleurs
     model.eval()
     with torch.no_grad():
         predicted_ab = model(L_tensor)
     
-    # Reconstruction de l'image LAB
-    L_np = tensor_to_image(L_tensor.squeeze(0))
-    ab_np = tensor_to_image(predicted_ab.squeeze(0))
+    # 4. Post-traitement intelligent
+    ab_generated = tensor_to_image(predicted_ab.squeeze(0))
     
-    lab_reconstructed = np.concatenate([L_np, ab_np], axis=2)
+    # Redimensionner UNIQUEMENT la couleur vers la taille originale
+    ab_upscaled = cv2.resize(ab_generated, (original_w, original_h))
     
-    # Conversion vers RGB
-    rgb_colorized = lab_to_rgb(lab_reconstructed)
+    # 5. Fusion : L Original (Net) + ab Prédit (Upscalé)
+    lab_final = np.zeros((original_h, original_w, 3))
+    lab_final[:, :, 0] = L_original           # Détails haute qualité
+    lab_final[:, :, 1] = ab_upscaled[:, :, 0] # Couleur a
+    lab_final[:, :, 2] = ab_upscaled[:, :, 1] # Couleur b
     
-    # Redimensionnement à la taille originale
-    rgb_colorized = cv2.resize(rgb_colorized, (original_size[1], original_size[0]))
+    # Conversion finale vers RGB
+    rgb_final = lab_to_rgb(lab_final)
     
-    return rgb_colorized
+    return rgb_final
 
 
 def load_model(model_path, device):

@@ -45,12 +45,20 @@ class ImageColorizationDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Redimensionner (modifiable selon les ressources)
-        target_size = (512, 512)  # Haute résolution
+        target_size = (256, 256)  # Optimisé pour petit dataset
         image = cv2.resize(image, target_size)
         
-        # Data Augmentation : Flip horizontal (50% de chance)
+        # Data Augmentation améliorée pour petit dataset
+        # Flip horizontal (50% de chance)
         if np.random.random() > 0.5:
             image = cv2.flip(image, 1)
+        
+        # Rotation légère (50% de chance)
+        if np.random.random() > 0.5:
+            angle = np.random.uniform(-15, 15)
+            h, w = image.shape[:2]
+            M = cv2.getRotationMatrix2D((w/2, h/2), angle, 1)
+            image = cv2.warpAffine(image, M, (w, h), borderMode=cv2.BORDER_REFLECT)
         
         # Convertir en LAB
         lab_image = rgb_to_lab(image)
@@ -94,7 +102,7 @@ def lab_to_rgb(lab_image):
     """
     Convertit une image LAB normalisée [0, 1] vers RGB uint8.
     """
-    lab = np.zeros_like(lab_image)
+    lab = np.zeros_like(lab_image, dtype=np.float32)
     
     # 1. Dénormalisation [0, 1] -> Valeurs LAB standards
     lab[:, :, 0] = lab_image[:, :, 0] * 100.0              # L -> 0-100
@@ -103,7 +111,7 @@ def lab_to_rgb(lab_image):
     
     # 2. Conversion LAB -> RGB
     # OpenCV gère la conversion float -> float RGB [0, 1]
-    rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+    rgb = cv2.cvtColor(lab.astype(np.float32), cv2.COLOR_LAB2RGB)
     
     # 3. Retour vers uint8 [0, 255]
     rgb_uint8 = (rgb * 255.0).clip(0, 255).astype(np.uint8)
@@ -262,27 +270,31 @@ def visualize_results(original, grayscale, colorized, save_path=None):
     plt.show()
 
 
-def preprocess_image(image_path, target_size=(512, 512)):
+def preprocess_image(image_path, target_size=(256, 256)):
     """
     Préprocesse une image pour l'inférence (CORRIGÉ).
     """
     # 1. Charger l'image
     image = cv2.imread(str(image_path))
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # Gérer les images N&B historiques
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    else:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # 2. Redimensionner AVANT la conversion LAB
     image = cv2.resize(image, target_size)
     
-    # 2. Utiliser rgb_to_lab pour avoir la MÊME normalisation que l'entraînement (0 à 1)
+    # 3. Utiliser rgb_to_lab pour avoir la MÊME normalisation que l'entraînement
     lab_image = rgb_to_lab(image)
     
-    # 3. Extraire le canal L
-    L_channel = lab_image[:, :, 0:1]  # Shape (512, 512, 1)
+    # 4. Extraire le canal L
+    L_channel = lab_image[:, :, 0:1]  # Shape (256, 256, 1)
     
-    # 4. Convertir en Tensor PyTorch
-    # Transpose pour passer de (H, W, C) -> (C, H, W)
+    # 5. Convertir en Tensor PyTorch
     tensor = torch.from_numpy(L_channel.transpose(2, 0, 1)).float()
-    
-    # Ajouter la dimension de batch: (1, 1, 512, 512)
-    tensor = tensor.unsqueeze(0)
+    tensor = tensor.unsqueeze(0)  # Ajouter dimension batch
     
     return tensor
 
