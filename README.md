@@ -1,4 +1,5 @@
 # Projet de Recolorisation d'Images Historiques
+![recolorisation](https://github.com/user-attachments/assets/a9e5f8fb-27e8-4a4a-88e0-af576f294521)
 
 ## Résumé
 
