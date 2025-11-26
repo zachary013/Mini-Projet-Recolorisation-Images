@@ -12,13 +12,10 @@ Ce projet utilise un modèle de Deep Learning (inspiré de U-Net) pour coloriser
 
 Voici quelques exemples de ce que notre modèle peut faire.
 
-|                   Avant (N&B)                   |            Après (Colorisé par l'IA)            |
-|:-----------------------------------------------:|:-----------------------------------------------:|
-| <img src="assets/image1-avant.jpg" width="300"> | <img src="assets/image1-apres.png" width="300"> |
-| <img src="assets/image2-avant.jpg" width="300"> | <img src="assets/image2-apres.png" width="300"> |
-|                   *Exemple 1*                   |                   *Exemple 2*                   |
-
-*(Note : Remplacez les images ci-dessus par de vrais exemples "avant/après" pour un impact maximal !)*
+|                   Avant (N&B)                    |            Après (Colorisé par l'IA)             |
+|:------------------------------------------------:|:------------------------------------------------:|
+| <img src="/assets/image1-avant.jpg" width="300"> | <img src="/assets/image1-apres.png" width="300"> |
+| <img src="/assets/image2-avant.jpg" width="300"> | <img src="/assets/image2-apres.png" width="300"> |
 
 ---
 
