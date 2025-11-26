@@ -16,3 +16,5 @@ tqdm>=4.65.0
 
 # Jupyter
 jupyter>=1.0.0
+streamlit>=1.30.0
+
