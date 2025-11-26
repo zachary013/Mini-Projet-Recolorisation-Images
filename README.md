@@ -186,9 +186,13 @@ Le projet est structuré de manière modulaire pour faciliter les extensions :
 - `src/utils.py` : Nouvelles métriques ou preprocessing
 - `src/colorize.py` : Améliorations du pipeline de colorisation
 
-## Auteur
+## Equipe
 
-**Zakariae AZARKAN**
+| Avatar                                                                                                  | Name | GitHub |
+|---------------------------------------------------------------------------------------------------------|------|--------|
+| <img src="https://github.com/zachary013.png" width="50" height="50" style="border-radius: 50%"/>        | Zakariae Azarkan | [@zachary013](https://github.com/zachary013) |
+| <img src="https://github.com/badrbenabdellah.png" width="50" height="50" style="border-radius: 50%"/>          | Badr Benabdellah | [@Salahjb](https://github.com/badrbenabdellah) |
+| <img src="https://github.com/bouba-34.png" width="50" height="50" style="border-radius: 50%"/>          | Sangare Boubacar | [@Salahjb](https://github.com/bouba-34) |
 
 ---
 
